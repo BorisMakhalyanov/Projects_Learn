@@ -1,157 +1,86 @@
+import math
 class Figure:
 
-    SILENT_MODE = True
+    sides_count = 0
 
-    def __init__(self, sides_count, rgb_tuple, *sides):
-        if not Figure.SILENT_MODE:
-            print(f'Figure.__init__: Длина списка сторон на входе {len(sides)}')
-            print(f'Figure.__init__: Список сторон на входе = {sides}')
-        self.sides_count = sides_count
-        #список длин сторон:
-        self.__sides = [1 for _ in range(sides_count)]
-        self.set_sides(*sides)
-        #список каналов цветов:
-        self.__color = (0, 0, 0)
-        r, g, b = rgb_tuple
-        self.set_color(r, g, b)
-        #заливка:
-        self.filled = True
-        if not Figure.SILENT_MODE:
-            print(f'Figure.__init__: Финальная длина списка сторон {len(self.__sides)}')
-            print(f'Figure.__init__: Финальный список сторон = {self.__sides}')
+    def __init__(self, color: list[int, int, int], *sides, filled=False):
+        if self.__is_valid_color(color[0], color[1], color[2]):
+            self.__color = list(color)
+        self.__sides = list(sides)
+        self.filled = filled
+
 
     def get_color(self):
         return self.__color
-
-    def __is_valid_color(self, r, g, b):
-        for c in [r, g, b]:
-            if type(c) != int:
-                if not Figure.SILENT_MODE:
-                    print('__is_valid_color: ошибка типа одного из каналов цвета')
-                return False
-            if c < 0 or c > 255:
-                if not Figure.SILENT_MODE:
-                    print('__is_valid_color: ошибка значения цветового канала')
-                return False
-        #если всё ок:
-        return True
+    @staticmethod
+    def __is_valid_color(r, g, b):
+        valid_value = 0 <= r <= 255 and 0 <= g <= 255 and 0 <= b <= 255
+        valid_types = isinstance(r, int) and isinstance(g, int) and isinstance(b, int)
+        return valid_value and valid_types
 
     def set_color(self, r, g, b):
         if self.__is_valid_color(r, g, b):
-            self.__color = (r, g, b)
-        elif not Figure.SILENT_MODE:
-            print(f'Figure: Цвет ({r}, {g}, {b}) не может быть установлен.')
+            self.__color = [r, g, b]
 
-    def __is_valid_sides(self, *sides_int_list):
-        if len(sides_int_list) != self.sides_count:
-            if not Figure.SILENT_MODE:
-                print(f'__is_valid_sides: Длина списка сторон {len(sides_int_list)} и количество сторон {self.sides_count} фигуры не равны.')
-                print(f'__is_valid_sides: Список сторон на входе функции = {sides_int_list}')
-            return False
+    @staticmethod
+    def __is_valid_sides(*sides_int_list):
         for side in sides_int_list:
-            if isinstance(side, int):
-                if side < 0:
-                    return False
-            else:
+            if not isinstance(side, int) or side <= 0:
                 return False
-        # если всё ок:
         return True
+
 
     def get_sides(self):
         return self.__sides
 
     def __len__(self):
-        perimetr = 0
-        for side in self.__sides:
-            perimetr += side
-        return perimetr
+        return sum(self.__sides)
 
     def set_sides(self, *new_sides):
-        if not Figure.SILENT_MODE:
-            print(f'set_sides: Длина списка сторон на входе {len(new_sides)}')
-            print(f'set_sides: Список сторон на входе = {new_sides}')
-        if self.__is_valid_sides(*new_sides):
-            self.__sides = list(new_sides)
+        if len(new_sides) == len(self.__sides):
+            valid_sides = []
+            for side in new_sides:
+                if self.__is_valid_sides(side):
+                    valid_sides.append(side)
+            self.__sides = valid_sides
 
-    def __str__(self):
-        info = f'\nFigure:\n - sides_count = {self.sides_count}'
-        info += f'\n - sides = {self.__sides}\n - color = {self.__color}\n - filled = {self.filled}'
-        info += f'\n - P = len() = {len(self)}'
-        return info
 
 
 class Circle(Figure):
+    sides_count = 1
 
-    PI_CONST = 3.141592653589793
+    def __init__(self, color: list[int, int, int], length, filled=False):
+        super().__init__(color, length, filled = filled)
+        self.__radius = length/ (2 * math.pi)
 
-    def __init__(self, rgb_tuple, *sides):
-        super().__init__(1, rgb_tuple, *sides)
-        self.__radius = self.get_radius()
-
-    def get_radius(self):
-        R = len(self) / (2.0 * Circle.PI_CONST)
-        # обновляем и возвращаем:
-        self.__radius = R
-        return R
 
     def get_square(self):
-        return Circle.PI_CONST * self.__radius ** 2
+        return len(self)**2 / (4 * math.pi)
 
-    def __str__(self):
-        info = super().__str__()
-        info += f'\n   Circle:'
-        info += f'\n    - radius = {self.get_radius()}'
-        info += f'\n    - area = {self.get_square()}'
-        return info
+
 
 class Triangle(Figure):
-
-    def __init__(self, rgb_tuple, *sides):
-        super().__init__(3, rgb_tuple, *sides)
-        self.__height = self.get_heights()
+    sides_count = 3
+    def __init__(self, color: tuple[int, int, int], height, *sides, filled = False):
+        super().__init__(color, *sides, filled=filled)
+        self.height = height
 
     def get_square(self):
         '''По формуле через полупериметр:'''
         half_P = 0.5 * len(self)
-        p = half_P
-        for side in self.get_sides():
-            p *= (half_P - side)
-        return p ** 0.5
+        sides = self.get_sides()
+        return math.sqrt(half_P*(half_P - sides[0])*(half_P - sides[1])*(half_P - sides[2]))
 
-    def get_heights(self):
-        '''У треугольника есть три высоты:'''
-        area = self.get_square()
-        heights = []
-        for side in self.get_sides():
-            heights.append(2 * area / side)
-        #обновляем и возвращаем:
-        self.__height = heights
-        return heights
-
-    def __str__(self):
-        info = super().__str__()
-        info += f'\n   Triangle:'
-        info += f'\n    - heights = {self.get_heights()}'
-        info += f'\n    - area = {self.get_square()}'
-        return info
 
 class Cube(Figure):
+    sides_count = 12
 
-    SILENT_MODE = True
-
-    def __init__(self, rgb_tuple, *one_side):
-        if len(one_side) == 1:
-            value = one_side[0]
-        else:
-            value = 1
-        self.__sides = [value for _ in range(12)]
-        if not Cube.SILENT_MODE:
-            print(f'Cube: len(one_side) = {len(one_side)}, one_side[0] = {one_side[0]}')
-            print(f'Cube: self.__sides = {self.__sides}')
-        super().__init__(12, rgb_tuple, *self.__sides)
+    def __init__(self, color: list[int, int, int], side, filled = False):
+        cube_sides = [side]*12
+        super().__init__(color, *cube_sides, filled = filled)
 
     def get_volume(self):
-        return self.__sides[0] ** 3
+        return self.get_sides()[0] ** 3
 
 '''
 ВАЖНО!
@@ -161,47 +90,23 @@ class Cube(Figure):
 Пример 3: Cube((200, 200, 100), 9), т.к. сторон(рёбер) у куба - 12, то его стороны будут - [9, 9, 9, ....., 9] (12)
 Пример 4: Cube((200, 200, 100), 9, 12), т.к. сторон(рёбер) у куба - 12, то его стороны будут - [1, 1, 1, ....., 1]
 '''
+circle1 = Circle((200, 200, 100), 10) # (Цвет, стороны)
+cube1 = Cube((222, 35, 130), 6)
 
-def geometry_test():
-    # print('Geometry test:')
-    rectangle = Figure(4, (255, 255, 255), 5, 7, 5, 7)
-    # print(len(rectangle))
-    # print(rectangle)
+# Проверка на изменение цветов:
+circle1.set_color(55, 66, 77) # Изменится
+print(circle1.get_color())
+cube1.set_color(300, 70, 15) # Не изменится
+print(cube1.get_color())
 
-    circle = Circle((127, 127, 127), 1000)
-    # print(circle)
+# Проверка на изменение сторон:
+cube1.set_sides(5, 3, 12, 4, 5) # Не изменится
+print(cube1.get_sides())
+circle1.set_sides(15) # Изменится
+print(circle1.get_sides())
 
-    triangle = Triangle((64, 64, 64), 3, 4, 5)
-    # print(triangle)
+# Проверка периметра (круга), это и есть длина:
+print(len(circle1))
 
-def main():
-    # print('\nКод для проверки:')
-    circle1 = Circle((200, 200, 100), 10) # (Цвет, стороны)
-    cube1 = Cube((222, 35, 130), 6)
-
-    #print(Cube.mro())
-    #print(cube1.__dir__())
-
-    # Проверка на изменение цветов:
-    circle1.set_color(55, 66, 77) # Изменится
-    print(circle1.get_color())
-    cube1.set_color(300, 70, 15) # Не изменится
-    print(cube1.get_color())
-
-    # Проверка на изменение сторон:
-    cube1.set_sides(5, 3, 12, 4, 5) # Не изменится
-    print(cube1.get_sides())
-    circle1.set_sides(15) # Изменится
-    print(circle1.get_sides())
-
-    # Проверка периметра (круга), это и есть длина:
-    print('Длина окружности')
-    print(len(circle1))
-
-    # Проверка объёма (куба):
-    print('Объём куба')
-    print(cube1.get_volume())
-
-if __name__ == '__main__':
-    geometry_test()
-    main()
+# Проверка объёма (куба):
+print(cube1.get_volume())
